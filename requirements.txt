@@ -15,5 +15,5 @@ scikit-learn
 pulp
 requests
 geopy
-google-genai
+google-generativeai
 python-dotenv

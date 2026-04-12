@@ -23,7 +23,8 @@ async def get_db_connection():
         password=DB_PASSWORD,
         database=DB_NAME,
         host=DB_HOST,
-        port=DB_PORT
+        port=DB_PORT,
+        statement_cache_size=0
     )
 
 async def execute_query(query, *args):

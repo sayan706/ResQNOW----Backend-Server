@@ -15,7 +15,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
+							"raw": "{\n    \"username\": \"sayan123\",\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -42,7 +42,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
+							"raw": "{\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -150,7 +150,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"project_id\": \"UUID\",\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639\n}",
+							"raw": "{\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639,\n    \"weather\": \"heavy rain\",\n    \"traffic_density\": \"high\",\n    \"road_type\": \"highway\",\n    \"is_festival_day\": true,\n    \"is_hotspot\": true,\n    \"crowd_level\": \"high\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -158,13 +158,20 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/projects/predict",
+							"raw": "{{baseUrl}}/projects/:project_id/predict",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"projects",
+								":project_id",
 								"predict"
+							],
+							"variable": [
+								{
+									"key": "project_id",
+									"value": ""
+								}
 							]
 						}
 					},
@@ -173,30 +180,10 @@
 			]
 		}
 	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		}
-	],
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8000",
+			"value": "http://127.0.0.1:8000",
 			"type": "string"
 		},
 		{
