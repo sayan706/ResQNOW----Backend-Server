@@ -15,7 +15,7 @@ class SupabaseStorage:
     def upload_file(self, file_path: str, destination_path: str):
         with open(file_path, "rb") as f:
             response = self.client.storage.from_(self.bucket_name).upload(
-                destination_path, f, {"content-type": "text/csv"}
+                destination_path, f, {"content-type": "text/csv", "upsert": "true"}
             )
         return response
 
@@ -23,7 +23,7 @@ class SupabaseStorage:
         response = self.client.storage.from_(self.bucket_name).upload(
             destination_path, 
             json_data.encode("utf-8"), 
-            {"content-type": "application/json"}
+            {"content-type": "application/json", "upsert": "true"}
         )
         return response
 

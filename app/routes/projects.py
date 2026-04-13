@@ -101,16 +101,24 @@ class PredictRequest(BaseModel):
     latitude: float
     longitude: float
     hour: Optional[int] = datetime.now().hour
+    day_of_week: Optional[str] = datetime.now().strftime("%A").lower()
     weather: Optional[str] = "clear"
-    traffic_density: Optional[str] = "medium"
-    road_type: Optional[str] = "urban road"
     lighting_condition: Optional[str] = "daylight"
     visibility_level: Optional[str] = "good"
     road_surface_condition: Optional[str] = "dry"
+    traffic_density: Optional[str] = "medium"
+    road_type: Optional[str] = "urban road"
+    speed_limit: Optional[int] = 60
+    traffic_control_presence: Optional[str] = "none"
+    number_of_lanes: Optional[int] = 2
+    sharp_turn_or_blind_curve: Optional[bool] = False
+    road_construction_present: Optional[bool] = False
     is_festival_day: Optional[bool] = False
+    is_public_holiday: Optional[bool] = False
     is_hotspot: Optional[bool] = False
     severity_trend: Optional[str] = "medium"
     crowd_level: Optional[str] = "low"
+    special_traffic_diversion: Optional[bool] = False
 
 @router.post("/{project_id}/predict")
 async def predict(

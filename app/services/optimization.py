@@ -69,13 +69,49 @@ def get_distance_matrix_cached(origins, destinations):
             cache_service.set(cache_key, t_time, expire=86400)
 
     return matrix
-
 def haversine_km(lat1, lon1, lat2, lon2):
-    R = 6371
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    R = 6371 # Earth radius in km
     la1, lo1, la2, lo2 = map(math.radians, [lat1, lon1, lat2, lon2])
     dlat, dlon = la2 - la1, lo2 - lo1
     a = math.sin(dlat / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin(dlon / 2) ** 2
     return R * 2 * math.asin(math.sqrt(a))
+
+def travel_time_haversine(lat1, lon1, lat2, lon2, speed=FALLBACK_SPEED_KMH):
+    """Estimated travel time (minutes) via Haversine + road detour factor 1.4x."""
+    return haversine_km(lat1, lon1, lat2, lon2) * 1.4 / speed * 60
+
+def get_travel_time(lat1, lon1, lat2, lon2):
+    """
+    Get travel time (minutes) between points.
+    Prioritizes Google Maps API, falls back to Haversine.
+    """
+    # Try Cache first
+    cache_key = f"dist:{lat1:.5f}:{lon1:.5f}:{lat2:.5f}:{lon2:.5f}"
+    cached_val = cache_service.get(cache_key)
+    if cached_val is not None:
+        return float(cached_val)
+
+    # Try Google Maps
+    if MAP_API_KEY and MAP_API_KEY != "YOUR_GOOGLE_MAPS_API_KEY_HERE":
+        url = (f"https://maps.googleapis.com/maps/api/distancematrix/json"
+               f"?origins={lat1},{lon1}&destinations={lat2},{lon2}&key={MAP_API_KEY}&mode=driving")
+        try:
+            res = req_lib.get(url, timeout=10).json()
+            if res['status'] == 'OK' and res['rows'][0]['elements'][0]['status'] == 'OK':
+                t_time = res['rows'][0]['elements'][0]['duration']['value'] / 60
+                cache_service.set(cache_key, t_time, expire=86400)
+                return t_time
+        except Exception:
+            pass
+
+    # Fallback to Haversine
+    t_time = travel_time_haversine(lat1, lon1, lat2, lon2)
+    cache_service.set(cache_key, t_time, expire=86400)
+    return t_time
 
 # --- Existing logic remains similar but uses the new cached matrix function ---
 
@@ -154,6 +190,172 @@ def solve_lscp(demand_pts, cand_locs, tt_matrix, threshold):
         return {'selected_locations': [cand_locs[j] for j in sel], 'ambulance_count': len(sel)}
     return {'ambulance_count': 0, 'status': 'Infeasible'}
 
+def reconstruct_state_from_dict(data: dict):
+    """
+    Reconstructs the internal system state from the standardized JSON structure.
+    Used for loading the source of truth before real-time updates.
+    """
+    all_results = {}
+    for period, p_data in data.get("time_periods", {}).items():
+        sel_ambs = p_data.get("selected_ambulances", [])
+        
+        # Reconstruct Area summary
+        zones_data = []
+        for z in p_data.get("zones", []):
+            zones_data.append({
+                "CLUSTER": z["cluster_label"],
+                "ZONE": z["risk_level"],
+                "CENTER_LATITUDE": z["centroid"]["lat"],
+                "CENTER_LONGITUDE": z["centroid"]["lng"],
+                "ACCIDENT_COUNT": z.get("total_original_points", 0)
+            })
+            
+        # Reconstruct Boundary Points
+        bpts = []
+        rev_map = {'north': 'N', 'south': 'S', 'east': 'E', 'west': 'W',
+                   'north_east': 'NE', 'north_west': 'NW', 'south_east': 'SE', 'south_west': 'SW'}
+        for z in p_data.get("zones", []):
+            for dp_key, dp_val in z.get("directional_points", {}).items():
+                bpts.append({
+                    "CLUSTER": z["cluster_label"],
+                    "ZONE": z["risk_level"],
+                    "DIRECTION": rev_map.get(dp_key, dp_key.upper()),
+                    "LATITUDE": dp_val["lat"],
+                    "LONGITUDE": dp_val["lng"]
+                })
+
+        all_results[period] = {
+            'lscp': {
+                'selected_locations': [(a["lat"], a["lng"]) for a in sel_ambs],
+                'selected_labels': [a.get("label", f"amb_{i}") for i, a in enumerate(sel_ambs)],
+                'selected_indices': [int(a["ambulance_id"].split("_")[1]) if "_" in a.get("ambulance_id", "") else i for i, a in enumerate(sel_ambs)],
+                'coverage_map': {} # regenerated on update
+            },
+            'zs': pd.DataFrame(zones_data),
+            'bpts': bpts,
+            'cands': [(c["lat"], c["lng"]) for c in p_data.get("candidate_ambulance_points", [])],
+            'clabels': [c.get("label", f"cand_{i}") for i, c in enumerate(p_data.get("candidate_ambulance_points", []))]
+        }
+    return all_results
+
+def add_real_time_point(all_results, period, lat, lon, risk_level):
+    """
+    Calculates coverage and updates the system state for a real-time point.
+    """
+    if period not in all_results:
+        # If the requested period is missing, we create a fresh state for it.
+        # we isolate incident zones (zs) and active deployments (lscp) 
+        # but WE MUST carry over the resource pool (cands/clabels) so we know where bases are.
+        import copy
+        existing = next(iter(all_results.values())) if all_results else None
+        all_results[period] = {
+            'lscp': {
+                'selected_locations': [], 
+                'selected_labels': [], 
+                'selected_indices': [],
+                'coverage_map': {}
+            },
+            'zs': pd.DataFrame(columns=["CLUSTER", "ZONE", "CENTER_LATITUDE", "CENTER_LONGITUDE", "ACCIDENT_COUNT", "TIME_PERIOD"]),
+            'bpts': [],
+            'cands': copy.deepcopy(existing.get('cands', [])) if existing else [],
+            'clabels': copy.deepcopy(existing.get('clabels', [])) if existing else []
+        }
+        
+    res = all_results[period]
+    
+    # Check current coverage
+    amb_locs = res['lscp']['selected_locations']
+    nearest_time = 999
+    nearest_idx = -1
+    
+    for i, loc in enumerate(amb_locs):
+        t = get_travel_time(loc[0], loc[1], lat, lon)
+        if t < nearest_time:
+            nearest_time = t
+            nearest_idx = i
+            
+    is_covered = (nearest_time <= COVERAGE_THRESHOLD_MINUTES)
+    
+    # 1. Create New Cluster
+    max_c = res['zs']['CLUSTER'].max() if not res['zs'].empty else -1
+    new_cluster_id = int(max_c + 1)
+    
+    # 2. Add Zone
+    new_zone = pd.DataFrame([{
+        "CLUSTER": new_cluster_id,
+        "ZONE": risk_level,
+        "CENTER_LATITUDE": lat,
+        "CENTER_LONGITUDE": lon,
+        "ACCIDENT_COUNT": 1,
+        "TIME_PERIOD": period
+    }])
+    res['zs'] = pd.concat([res['zs'], new_zone], ignore_index=True)
+    
+    # 3. Add Boundary Points
+    offset = 0.001
+    diag = 0.707
+    dirs = {'N':(lat+offset, lon), 'S':(lat-offset, lon), 'E':(lat, lon+offset), 'W':(lat, lon-offset),
+            'NE':(lat+offset*diag, lon+offset*diag), 'NW':(lat+offset*diag, lon-offset*diag),
+            'SE':(lat-offset*diag, lon+offset*diag), 'SW':(lat-offset*diag, lon-offset*diag)}
+    
+    for d, (la, lo) in dirs.items():
+        res['bpts'].append({'CLUSTER': new_cluster_id, 'ZONE': risk_level, 'DIRECTION': d, 'LATITUDE': la, 'LONGITUDE': lo})
+
+    # 4. Handle Deployment
+    if not is_covered:
+        new_label = f"RT-Ambulance-C{new_cluster_id}"
+        if 'cands' not in res: res['cands'] = []
+        if 'clabels' not in res: res['clabels'] = []
+        res['cands'].append((lat, lon))
+        res['clabels'].append(new_label)
+        new_idx = len(res['cands']) - 1
+        
+        res['lscp']['selected_locations'].append((lat, lon))
+        res['lscp']['selected_labels'].append(new_label)
+        res['lscp']['selected_indices'].append(new_idx)
+        
+    return all_results
+
+def serialize_state_to_json(all_results):
+    """
+    Serializes the internal state back into the standardized JSON format.
+    """
+    output = {"time_periods": {}}
+    for period, res in all_results.items():
+        p_data = {
+            "metadata": {"time_period_name": period, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "total_selected_ambulances": len(res['lscp']['selected_locations'])},
+            "zones": [],
+            "candidate_ambulance_points": [],
+            "selected_ambulances": []
+        }
+        
+        # Zones
+        for _, row in res['zs'].iterrows():
+            cid = int(row['CLUSTER'])
+            dp = {}
+            for p in [x for x in res['bpts'] if x['CLUSTER'] == cid]:
+                key = {'N':'north','S':'south','E':'east','W':'west','NE':'north_east','NW':'north_west','SE':'south_east','SW':'south_west'}.get(p['DIRECTION'], p['DIRECTION'].lower())
+                dp[key] = {"lat": float(p['LATITUDE']), "lng": float(p['LONGITUDE'])}
+            
+            p_data["zones"].append({
+                "zone_id": f"zone_{cid}",
+                "cluster_label": cid,
+                "risk_level": row['ZONE'],
+                "centroid": {"lat": float(row['CENTER_LATITUDE']), "lng": float(row['CENTER_LONGITUDE'])},
+                "directional_points": dp
+            })
+
+        # Candidates
+        for j, (loc, lab) in enumerate(zip(res.get('cands', []), res.get('clabels', []))):
+            p_data["candidate_ambulance_points"].append({"ambulance_id": f"amb_{j}", "label": lab, "lat": float(loc[0]), "lng": float(loc[1])})
+
+        # Selected
+        for loc, lab, idx in zip(res['lscp']['selected_locations'], res['lscp']['selected_labels'], res['lscp']['selected_indices']):
+            p_data["selected_ambulances"].append({"ambulance_id": f"amb_{idx}", "label": lab, "lat": float(loc[0]), "lng": float(loc[1])})
+
+        output["time_periods"][period] = p_data
+    return json.dumps(output, indent=2)
+
 def process_ambulance_optimization(csv_path):
     df = load_and_clean_data(csv_path)
     X_scaled = StandardScaler().fit_transform(df[['LATITUDE', 'LONGITUDE']])
@@ -183,15 +385,44 @@ def process_ambulance_optimization(csv_path):
         dem = [(p['LATITUDE'], p['LONGITUDE']) for p in bpts]
         origins = [(r['CENTER_LATITUDE'], r['CENTER_LONGITUDE']) for _, r in cc.iterrows()]
         
-        # USE THE NEW CACHED MATRIX FUNCTION
         tt = get_distance_matrix_cached(origins, dem)
-        
         lscp = solve_lscp(dem, origins, tt, COVERAGE_THRESHOLD_MINUTES)
         
         all_results[period] = {
             "metadata": {"time_period_name": period, "coverage_threshold_minutes": COVERAGE_THRESHOLD_MINUTES, "total_zones": len(pz)},
-            "zones": [{"zone_id": f"zone_{int(r['CLUSTER'])}", "risk_level": r['ZONE'], "centroid": {"lat": r['CENTER_LATITUDE'], "lng": r['CENTER_LONGITUDE']}} for _, r in pz.iterrows()],
-            "selected_ambulances": [{"ambulance_id": f"amb_{idx}", "lat": loc[0], "lng": loc[1]} for idx, loc in enumerate(lscp.get('selected_locations', []))]
+            "zones": [],
+            "candidate_ambulance_points": [],
+            "selected_ambulances": []
         }
+
+        # Align with structured JSON format
+        for _, r in pz.iterrows():
+            cid = int(r['CLUSTER'])
+            b_pts = [p for p in bpts if p['CLUSTER'] == cid]
+            dp = {}
+            for p in b_pts:
+                key = {'N':'north','S':'south','E':'east','W':'west','NE':'north_east','NW':'north_west','SE':'south_east','SW':'south_west'}.get(p['DIRECTION'], p['DIRECTION'].lower())
+                dp[key] = {"lat": float(p['LATITUDE']), "lng": float(p['LONGITUDE'])}
+            
+            all_results[period]["zones"].append({
+                "zone_id": f"zone_{cid}",
+                "cluster_label": cid,
+                "risk_level": r['ZONE'],
+                "centroid": {"lat": float(r['CENTER_LATITUDE']), "lng": float(r['CENTER_LONGITUDE'])},
+                "directional_points": dp
+            })
+
+        # Candidate Points (use origins as base)
+        for idx, loc in enumerate(origins):
+             all_results[period]["candidate_ambulance_points"].append({
+                 "ambulance_id": f"amb_{idx}", "label": f"Amb-Base-{idx}", "lat": loc[0], "lng": loc[1]
+             })
+
+        # Selected Ambulances
+        sel_locs = lscp.get('selected_locations', [])
+        for idx, loc in enumerate(sel_locs):
+            all_results[period]["selected_ambulances"].append({
+                "ambulance_id": f"amb_{idx}", "label": f"Ambulance-{idx}", "lat": loc[0], "lng": loc[1]
+            })
 
     return {"time_periods": all_results}

@@ -150,7 +150,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639,\n    \"weather\": \"heavy rain\",\n    \"traffic_density\": \"high\",\n    \"road_type\": \"highway\",\n    \"is_festival_day\": true,\n    \"is_hotspot\": true,\n    \"crowd_level\": \"high\"\n}",
+							"raw": "{\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639,\n    \"hour\": 14,\n    \"day_of_week\": \"Monday\",\n    \"weather\": \"heavy rain\",\n    \"lighting_condition\": \"daylight\",\n    \"visibility_level\": \"poor\",\n    \"road_surface_condition\": \"wet\",\n    \"traffic_density\": \"high\",\n    \"road_type\": \"highway\",\n    \"speed_limit\": 80,\n    \"traffic_control_presence\": \"none\",\n    \"number_of_lanes\": 4,\n    \"sharp_turn_or_blind_curve\": false,\n    \"road_construction_present\": false,\n    \"is_festival_day\": true,\n    \"is_hotspot\": true,\n    \"severity_trend\": \"high\",\n    \"crowd_level\": \"high\",\n    \"special_traffic_diversion\": false\n}",
 							"options": {
 								"raw": {
 									"language": "json"
