@@ -1,195 +1,233 @@
 {
-	"info": {
-		"_postman_id": "resqnow-backend-api",
-		"name": "ResQNow API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Auth",
-			"item": [
-				{
-					"name": "Register",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"sayan123\",\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"register"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Login",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/login",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"login"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Projects",
-			"item": [
-				{
-					"name": "Upload CSV",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "name",
-									"value": "My First Project",
-									"type": "text"
-								},
-								{
-									"key": "file",
-									"type": "file",
-									"src": []
-								}
-							]
-						},
-						"url": {
-							"raw": "{{baseUrl}}/projects/upload",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"projects",
-								"upload"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Check Status",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/projects/:project_id/status",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"projects",
-								":project_id",
-								"status"
-							],
-							"variable": [
-								{
-									"key": "project_id",
-									"value": ""
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Predict",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639,\n    \"hour\": 14,\n    \"day_of_week\": \"Monday\",\n    \"weather\": \"heavy rain\",\n    \"lighting_condition\": \"daylight\",\n    \"visibility_level\": \"poor\",\n    \"road_surface_condition\": \"wet\",\n    \"traffic_density\": \"high\",\n    \"road_type\": \"highway\",\n    \"speed_limit\": 80,\n    \"traffic_control_presence\": \"none\",\n    \"number_of_lanes\": 4,\n    \"sharp_turn_or_blind_curve\": false,\n    \"road_construction_present\": false,\n    \"is_festival_day\": true,\n    \"is_hotspot\": true,\n    \"severity_trend\": \"high\",\n    \"crowd_level\": \"high\",\n    \"special_traffic_diversion\": false\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/projects/:project_id/predict",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"projects",
-								":project_id",
-								"predict"
-							],
-							"variable": [
-								{
-									"key": "project_id",
-									"value": ""
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://127.0.0.1:8000",
-			"type": "string"
-		},
-		{
-			"key": "token",
-			"value": "",
-			"type": "string"
-		}
-	]
+    "info": {
+        "_postman_id": "resqnow-backend-api",
+        "name": "ResQNow API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"sayan123\",\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"sayan@test.com\",\n    \"password\": \"StrongPass@123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Projects",
+            "item": [
+                {
+                    "name": "Upload CSV",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "name",
+                                    "value": "My First Project",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/projects/upload",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "projects",
+                                "upload"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Check Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/projects/:project_id/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "projects",
+                                ":project_id",
+                                "status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "project_id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Predict",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"latitude\": 22.5726,\n    \"longitude\": 88.3639,\n    \"hour\": 14,\n    \"day_of_week\": \"Monday\",\n    \"weather\": \"heavy rain\",\n    \"lighting_condition\": \"daylight\",\n    \"visibility_level\": \"poor\",\n    \"road_surface_condition\": \"wet\",\n    \"traffic_density\": \"high\",\n    \"road_type\": \"highway\",\n    \"speed_limit\": 80,\n    \"traffic_control_presence\": \"none\",\n    \"number_of_lanes\": 4,\n    \"sharp_turn_or_blind_curve\": false,\n    \"road_construction_present\": false,\n    \"is_festival_day\": true,\n    \"is_hotspot\": true,\n    \"severity_trend\": \"high\",\n    \"crowd_level\": \"high\",\n    \"special_traffic_diversion\": false\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/projects/:project_id/predict",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "projects",
+                                ":project_id",
+                                "predict"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "project_id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Prediction (Standalone)",
+            "item": [
+                {
+                    "name": "Analyze Zone Risk",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"zone_name\": \"Downtown Square Intersect\",\n  \"latitude\": 22.5726,\n  \"longitude\": 88.3639,\n  \"hour\": 23,\n  \"day_of_week\": \"friday\",\n  \"weather\": \"heavy rain\",\n  \"lighting_condition\": \"dark_no_streetlights\",\n  \"visibility_level\": \"poor\",\n  \"road_surface_condition\": \"damaged\",\n  \"traffic_density\": \"high\",\n  \"road_type\": \"intersection\",\n  \"speed_limit\": 80,\n  \"traffic_control_presence\": \"none\",\n  \"number_of_lanes\": 2,\n  \"sharp_turn_or_blind_curve\": true,\n  \"road_construction_present\": true,\n  \"is_festival_day\": true,\n  \"is_public_holiday\": false,\n  \"is_hotspot\": true,\n  \"severity_trend\": \"high\",\n  \"crowd_level\": \"high\",\n  \"special_traffic_diversion\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/prediction/analyze",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "prediction",
+                                "analyze"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://127.0.0.1:8000",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ]
 }

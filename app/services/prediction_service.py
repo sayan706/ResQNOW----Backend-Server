@@ -178,4 +178,41 @@ class PredictionService:
         dist = R * 2 * math.asin(math.sqrt(a))
         return dist * 1.5 / 30 * 60 # min
 
+    def identify_key_risk_factors(self, features: Dict[str, float]) -> List[Dict[str, Any]]:
+        contribs = [
+            {"factor": k.replace("_", " ").title(), "score": features[k] * w, "weight": w}
+            for k, w in WEIGHTS.items() if features.get(k, 0) * w > 0
+        ]
+        contribs.sort(key=lambda x: x["score"], reverse=True)
+        return contribs[:6]
+
+    def generate_recommendations(self, data: Dict[str, Any], risk_level: str) -> List[str]:
+        recs: List[str] = []
+        if risk_level == "Critical":
+            recs.extend(["FLAG zone as TEMPORARY HIGH-RISK immediately", "Deploy ambulance on standby within the zone", "Increase police patrol and monitoring"])
+        if risk_level in ("Critical", "High"):
+            recs.extend(["Add temporary warning signage / LED boards", "Activate real-time traffic monitoring"])
+        
+        weather = data.get("weather", "").lower()
+        if weather in ("heavy rain", "storm", "fog"):
+            recs.append("Enforce reduced speed limits due to weather")
+        if data.get("visibility_level") == "poor":
+            recs.append("Deploy fog/visibility warning markers")
+        if data.get("road_surface_condition") in ("icy", "damaged"):
+            recs.append("Urgent: Road maintenance / pothole repair")
+            
+        speed = data.get("speed_limit", 60)
+        if speed >= 80:
+            recs.append("Deploy speed radar / enforce speed control")
+            
+        if data.get("road_type") == "highway" and (weather == "heavy rain" or weather == "storm"):
+            recs.append("Highway + rain: stationary patrol + speed monitoring")
+            
+        if data.get("is_festival_day"):
+            recs.append("Festival/holiday: deploy crowd & traffic control team")
+        if data.get("crowd_level") in ("high", "very high"):
+            recs.append("High crowd: set up pedestrian-safe barriers")
+            
+        return recs or ["Continue routine monitoring — no elevated actions needed"]
+
 prediction_service = PredictionService()

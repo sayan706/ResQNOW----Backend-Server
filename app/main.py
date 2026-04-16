@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, projects
+from app.routes import auth, projects, predictions
 from dotenv import load_dotenv
 import os
 
@@ -20,6 +20,7 @@ app.add_middleware(
 # Routes
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(predictions.router)
 
 @app.get("/")
 async def root():
