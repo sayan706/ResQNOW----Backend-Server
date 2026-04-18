@@ -170,7 +170,8 @@ async def predict(
 @router.get("/history")
 async def get_history(current_user_id: str = Depends(get_current_user)):
     """
-    Retrieves all projects for the authenticated user, including all historical states (JSON files).
+    Retrieves all projects for the authenticated user (with states) 
+    AND all standalone prediction history records.
     """
     # 1. Fetch all projects for this user
     projects_rows = await fetch_all(
@@ -178,7 +179,7 @@ async def get_history(current_user_id: str = Depends(get_current_user)):
         current_user_id
     )
     
-    history = []
+    projects_list = []
     for p in projects_rows:
         # 2. Fetch all states for this project
         states_rows = await fetch_all(
@@ -186,7 +187,7 @@ async def get_history(current_user_id: str = Depends(get_current_user)):
             p["id"]
         )
         
-        history.append({
+        projects_list.append({
             "project_id": str(p["id"]),
             "name": p["name"],
             "file_name": p["file_name"],
@@ -203,4 +204,37 @@ async def get_history(current_user_id: str = Depends(get_current_user)):
             ]
         })
     
-    return history
+    # 3. Fetch all prediction history for this user
+    predictions_rows = await fetch_all(
+        """
+        SELECT id, zone_name, latitude, longitude, input_data, risk_probability, 
+               risk_level, key_factors, recommendations, ai_reasoning, created_at 
+        FROM predictions_history 
+        WHERE user_id = $1 
+        ORDER BY created_at DESC
+        """,
+        current_user_id
+    )
+    
+    predictions_list = [
+        {
+            "id": str(row["id"]),
+            "zone_name": row["zone_name"],
+            "latitude": row["latitude"],
+            "longitude": row["longitude"],
+            "input_data": json.loads(row["input_data"]) if isinstance(row["input_data"], str) else row["input_data"],
+            "risk_profile": {
+                "probability": row["risk_probability"],
+                "level": row["risk_level"],
+                "key_factors": json.loads(row["key_factors"]) if isinstance(row["key_factors"], str) else row["key_factors"],
+                "recommendations": json.loads(row["recommendations"]) if isinstance(row["recommendations"], str) else row["recommendations"],
+                "ai_reasoning": row["ai_reasoning"]
+            },
+            "created_at": row["created_at"]
+        } for row in predictions_rows
+    ]
+    
+    return {
+        "projects": projects_list,
+        "predictions": predictions_list
+    }

@@ -6,7 +6,7 @@ import json
 
 from app.routes.deps import get_current_user
 from app.services.prediction_service import prediction_service
-from app.services.db.supabase import execute_query
+from app.services.db.supabase import execute_query, fetch_all
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
 
@@ -89,3 +89,43 @@ async def analyze_zone(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+@router.get("/history")
+async def get_prediction_history(current_user_id: str = Depends(get_current_user)):
+    """
+    Retrieves all standalone prediction records for the authenticated user.
+    """
+    try:
+        rows = await fetch_all(
+            """
+            SELECT id, zone_name, latitude, longitude, input_data, risk_probability, 
+                   risk_level, key_factors, recommendations, ai_reasoning, created_at 
+            FROM predictions_history 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+            """,
+            current_user_id
+        )
+        
+        history = [
+            {
+                "id": str(row["id"]),
+                "zone_name": row["zone_name"],
+                "latitude": row["latitude"],
+                "longitude": row["longitude"],
+                "input_data": json.loads(row["input_data"]) if isinstance(row["input_data"], str) else row["input_data"],
+                "risk_profile": {
+                    "probability": row["risk_probability"],
+                    "level": row["risk_level"],
+                    "key_factors": json.loads(row["key_factors"]) if isinstance(row["key_factors"], str) else row["key_factors"],
+                    "recommendations": json.loads(row["recommendations"]) if isinstance(row["recommendations"], str) else row["recommendations"],
+                    "ai_reasoning": row["ai_reasoning"]
+                },
+                "created_at": row["created_at"]
+            } for row in rows
+        ]
+        
+        return history
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch history: {str(e)}")
