@@ -166,3 +166,41 @@ async def predict(
             "message": "The nearest ambulance is being dispatched based on the synchronized project state."
         }
     }
+
+@router.get("/history")
+async def get_history(current_user_id: str = Depends(get_current_user)):
+    """
+    Retrieves all projects for the authenticated user, including all historical states (JSON files).
+    """
+    # 1. Fetch all projects for this user
+    projects_rows = await fetch_all(
+        "SELECT id, name, file_name, status, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC",
+        current_user_id
+    )
+    
+    history = []
+    for p in projects_rows:
+        # 2. Fetch all states for this project
+        states_rows = await fetch_all(
+            "SELECT id, json_url, state_type, version, created_at FROM project_states WHERE project_id = $1 ORDER BY version DESC",
+            p["id"]
+        )
+        
+        history.append({
+            "project_id": str(p["id"]),
+            "name": p["name"],
+            "file_name": p["file_name"],
+            "status": p["status"],
+            "created_at": p["created_at"],
+            "states": [
+                {
+                    "state_id": str(s["id"]),
+                    "json_url": s["json_url"],
+                    "state_type": s["state_type"],
+                    "version": s["version"],
+                    "created_at": s["created_at"]
+                } for s in states_rows
+            ]
+        })
+    
+    return history

@@ -176,6 +176,30 @@
                         }
                     },
                     "response": []
+                },
+                {
+                    "name": "Get Project History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/projects/history",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "projects",
+                                "history"
+                            ]
+                        }
+                    },
+                    "response": []
                 }
             ]
         },
